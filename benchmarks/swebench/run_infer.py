@@ -47,15 +47,57 @@ from benchmarks.utils.models import (
 )
 from benchmarks.utils.tool_presets import get_tools_for_preset
 from benchmarks.utils.version import get_phased_image_tag_prefix
-from openhands.sdk import Agent, Conversation, Tool, get_logger
+from openhands.sdk import Agent, Conversation, LLM, Tool, get_logger
 from openhands.sdk.agent import ACPAgent
 from openhands.sdk.context.condenser import LLMSummarizingCondenser
+from openhands.sdk.tool import BUILT_IN_TOOLS
 from openhands.sdk.workspace import RemoteWorkspace
 from openhands.tools.task import TaskToolSet
 from openhands.workspace import APIRemoteWorkspace, ApptainerWorkspace, DockerWorkspace
 
 
 logger = get_logger(__name__)
+
+
+def get_default_tool_names(*, enable_switch_llm: bool) -> list[str]:
+    """Return SDK defaults plus optional native LLM switching."""
+    names = [tool.__name__ for tool in BUILT_IN_TOOLS]
+    if enable_switch_llm:
+        names.append("SwitchLLMTool")
+    return names
+
+
+def assert_empty_llm_profile_store(workspace: RemoteWorkspace) -> None:
+    """Fail fast if the agent server already exposes named LLM profiles."""
+    response = workspace.client.get("/api/profiles")
+    response.raise_for_status()
+    profiles = response.json().get("profiles", [])
+    if profiles:
+        names = [p.get("name", "<unnamed>") for p in profiles]
+        raise RuntimeError(
+            "E1 requires an empty agent-server LLM profile store before "
+            f"provisioning the alternate profile; found: {names}"
+        )
+
+
+def provision_llm_profile(
+    workspace: RemoteWorkspace,
+    *,
+    profile_name: str,
+    llm: LLM,
+) -> None:
+    """Provision one named LLM profile on this workspace's agent server."""
+    response = workspace.client.post(
+        f"/api/profiles/{profile_name}",
+        json={
+            "llm": llm.model_dump(
+                mode="json",
+                context={"expose_secrets": "plaintext"},
+            ),
+            "include_secrets": True,
+        },
+    )
+    response.raise_for_status()
 
 
 def get_instruction(
@@ -399,6 +441,20 @@ class SWEBenchEvaluation(Evaluation):
             agent = build_acp_agent(self.metadata.agent_type, self.metadata.llm.model)
         else:
             agent_llm = build_eval_llm(self.metadata.llm)
+            if self.metadata.enable_switch_llm:
+                assert self.metadata.switch_llm_profile_name is not None
+                assert self.metadata.switch_llm is not None
+                alternate_llm = build_eval_llm(
+                    self.metadata.switch_llm,
+                    usage_id=f"profile:{self.metadata.switch_llm_profile_name}",
+                )
+                assert_empty_llm_profile_store(workspace)
+                provision_llm_profile(
+                    workspace,
+                    profile_name=self.metadata.switch_llm_profile_name,
+                    llm=alternate_llm,
+                )
+
             tools = get_tools_for_preset(
                 preset=self.metadata.tool_preset,
                 # Disable browser tools in CLI mode
@@ -433,6 +489,9 @@ class SWEBenchEvaluation(Evaluation):
             agent = Agent(
                 llm=agent_llm,
                 tools=tools,
+                include_default_tools=get_default_tool_names(
+                    enable_switch_llm=self.metadata.enable_switch_llm
+                ),
                 system_prompt_kwargs={"cli_mode": True},
                 condenser=condenser,
                 agent_context=agent_context,
@@ -540,6 +599,21 @@ def main() -> None:
     llm = load_llm_config(args.llm_config_path)
     logger.info("Using LLM config: %s", llm.model_dump_json(indent=2))
 
+    switch_llm = None
+    switch_llm_profile_name = None
+    if args.enable_switch_llm:
+        if args.agent_type != "default":
+            parser.error("--enable-switch-llm is only supported with --agent-type default")
+        if not args.switch_llm_config_path:
+            parser.error("--enable-switch-llm requires --switch-llm-config-path")
+        switch_llm = load_llm_config(args.switch_llm_config_path)
+        switch_llm_profile_name = args.switch_llm_profile_name
+        logger.info(
+            "Enabling SwitchLLMTool with alternate profile %r (%s)",
+            switch_llm_profile_name,
+            switch_llm.model,
+        )
+
     dataset_description = (
         args.dataset.replace("/", "__") + "-" + args.split.replace("/", "__")
     )
@@ -580,6 +654,9 @@ def main() -> None:
         workspace_type=args.workspace,
         tool_preset=args.tool_preset,
         enable_delegation=args.enable_delegation,
+        enable_switch_llm=args.enable_switch_llm,
+        switch_llm_profile_name=switch_llm_profile_name,
+        switch_llm=switch_llm,
         agent_type=args.agent_type,
         enable_condenser=enable_condenser,
         condenser_max_size=args.condenser_max_size,

@@ -103,6 +103,23 @@ def get_parser(add_llm_config: bool = True) -> argparse.ArgumentParser:
         help="Enable sub-agent delegation tools for the agent",
     )
     parser.add_argument(
+        "--enable-switch-llm",
+        action="store_true",
+        default=False,
+        help="Enable the OpenHands SDK SwitchLLMTool",
+    )
+    parser.add_argument(
+        "--switch-llm-config-path",
+        type=str,
+        help="Path to the alternate LLM JSON config provisioned on each agent server",
+    )
+    parser.add_argument(
+        "--switch-llm-profile-name",
+        type=str,
+        default="alternate",
+        help="Name exposed to SwitchLLMTool for the alternate model (default: alternate)",
+    )
+    parser.add_argument(
         "--agent-type",
         type=str,
         default="default",

@@ -7,6 +7,7 @@ from benchmarks.utils.laminar import LaminarEvalMetadata
 from openhands.sdk import LLM, Event, get_logger
 from openhands.sdk.critic import CriticBase
 from openhands.sdk.llm import Metrics
+from openhands.sdk.llm.llm_profile_store import PROFILE_NAME_PATTERN
 from openhands.sdk.utils.models import OpenHandsModel
 
 
@@ -77,6 +78,21 @@ class EvalMetadata(BaseModel):
     enable_delegation: bool = Field(
         default=False,
         description="Enable sub-agent delegation tools for the agent",
+    )
+    enable_switch_llm: bool = Field(
+        default=False,
+        description="Enable the SDK SwitchLLMTool for the standard OpenHands agent",
+    )
+    switch_llm_profile_name: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        pattern=PROFILE_NAME_PATTERN,
+        description="Server-side name for the alternate LLM profile used by SwitchLLMTool",
+    )
+    switch_llm: LLM | None = Field(
+        default=None,
+        description="Alternate LLM configuration provisioned to each agent server",
     )
     enable_condenser: bool = Field(
         default=True,
