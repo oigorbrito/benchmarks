@@ -128,6 +128,7 @@ Normative evidence:
 
 - `experiments/ndv/e0-e1-r1-r4-evidence.md`
 - `experiments/ndv/gemini-g1-g4-evidence.md`
+- `experiments/ndv/upstreamability-assessment.md`
 
 Historical, non-normative artifacts:
 
