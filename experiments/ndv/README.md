@@ -4,14 +4,29 @@
 
 - `ARCHITECTURE=FROZEN`
 - `REUSE_ONLY=ACTIVE`
-- `ENGINEERING_MVP=SUPPORTED`
+- `ENGINEERING_VALIDATION=SUPPORTED`
+- `PRODUCT_MVP=NOT_REACHED`
 - `VALIDATION_BLOCK=CLOSED`
 - `EVIDENCE_BUNDLE=CLOSED`
 - `NEXT_PROVIDER_TESTS=0`
 
-The engineering MVP is validated. A scientific treatment-effect comparison
+The engineering switching path is validated, but the project has not yet reached a product MVP. A scientific treatment-effect comparison
 between E0 and E1 has not been established because provider-backed experiments
 were blocked by external capacity/rate-limit conditions.
+
+## Current product status
+
+The earlier `ENGINEERING_MVP=SUPPORTED` label is superseded by:
+
+- `ENGINEERING_VALIDATION=SUPPORTED`
+- `PRODUCT_MVP=NOT_REACHED`
+
+The validated result is an engineering capability: native OpenHands LLM
+switching works end to end through the benchmark integration.
+
+A product MVP still requires an explicit product surface, user workflow,
+acceptance criteria, and end-to-end value proposition beyond the benchmark
+validation performed here.
 
 ## Architecture
 
@@ -137,7 +152,8 @@ Historical, non-normative artifacts:
 
 ## Scientific status
 
-- `ENGINEERING_MVP=SUPPORTED`
+- `ENGINEERING_VALIDATION=SUPPORTED`
+- `PRODUCT_MVP=NOT_REACHED`
 - `SCIENTIFIC_EFFECT_OF_SWITCH=NOT_ESTABLISHED`
 
 Invalid provider arms must not be used for causal comparison of tokens, cost,
@@ -155,7 +171,7 @@ Keep the existing API key. Do not create a new key.
 
 ## Scope boundary
 
-This MVP does not claim that switching improves benchmark performance, cost,
+This engineering validation does not claim that switching improves benchmark performance, cost,
 token usage, or completion rate.
 
 It establishes that native OpenHands LLM switching can be exposed through a

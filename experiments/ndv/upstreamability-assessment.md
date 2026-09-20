@@ -73,7 +73,7 @@ should not be part of an upstream feature patch:
 
 ## Minor cleanup before an upstream PR
 
-The engineering MVP does not require these changes. They are recommended only
+The closed engineering validation does not require these changes. They are recommended only
 for preparation of a future upstream proposal.
 
 ### Configuration validation
